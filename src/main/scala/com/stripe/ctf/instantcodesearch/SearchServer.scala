@@ -19,7 +19,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     for(line <- Source.fromFile("/usr/share/dict/words").getLines()) {
       //dict.put(line, List[Match]())
       //System.err.println(dict.toString)
-      handleSearch_dict(line)
+      if (line.length % 3 == id - 1)
+        handleSearch_dict(line)
       //System.err.println("Dictionary search "+line)
     }
     indexed = true
@@ -45,8 +46,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       indexer.index()
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexer.write(IndexPath)
-      //indexed = true
-      dictionary_words
+      indexed = true
+      //dictionary_words
     }
 
     Future.value(successResponse())

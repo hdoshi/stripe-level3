@@ -3,7 +3,7 @@ package com.stripe.ctf.instantcodesearch
 import com.twitter.util.Future
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import org.jboss.netty.util.CharsetUtil.UTF_8
-
+import scala.collection.immutable.StringOps
 class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, id) {
   val NumNodes = 3
 
@@ -63,7 +63,10 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
   }
 
   override def query(q: String) = {
-    val responses = clients.map {client => client.query(q)}
-    responses(0)
+    val index:Int = q.length % NumNodes
+    //val responses = clients.map {client => client.query(q)}
+    val response = clients(index).query(q)
+    //responses(0)
+    response
   }
 }
