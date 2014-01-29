@@ -46,8 +46,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       indexer.index()
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexer.write(IndexPath)
-      indexed = true
-      //dictionary_words
+      //indexed = true
+      dictionary_words
     }
 
     Future.value(successResponse())
