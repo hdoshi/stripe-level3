@@ -3,12 +3,27 @@ package com.stripe.ctf.instantcodesearch
 import com.twitter.util.{Future, Promise, FuturePool}
 import com.twitter.concurrent.Broker
 import org.jboss.netty.handler.codec.http.{HttpResponse, HttpResponseStatus}
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
+import scala.io.Source
+
 
 class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) {
   val IndexPath = "instantcodesearch-" + id + ".index"
   case class Query(q : String, broker : Broker[SearchResult])
   lazy val searcher = new Searcher(IndexPath)
   @volatile var indexed = false
+
+  val dict = new ConcurrentHashMap[String, List[Match]].asScala
+  def dictionary_words() = {
+    for(line <- Source.fromFile("/usr/share/dict/words").getLines()) {
+      //dict.put(line, List[Match]())
+      //System.err.println(dict.toString)
+      handleSearch_dict(line)
+      //System.err.println("Dictionary search "+line)
+    }
+    indexed = true
+  }
 
   override def healthcheck() = {
     Future.value(successResponse())
@@ -30,7 +45,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       indexer.index()
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexer.write(IndexPath)
-      indexed = true
+      //indexed = true
+      dictionary_words
     }
 
     Future.value(successResponse())
@@ -41,7 +57,7 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     handleSearch(q)
   }
 
-  def handleSearch(q: String) = {
+  def handleSearch_dict(q: String) = {
     val searches = new Broker[Query]()
     searches.recv foreach { q =>
       FuturePool.unboundedPool {searcher.search(q.q, q.broker)}
@@ -51,16 +67,53 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     val err = new Broker[Throwable]
     searches ! new Query(q, matches)
 
-    val promise = Promise[HttpResponse]
     var results = List[Match]()
 
     matches.recv foreach { m =>
       m match {
         case m : Match => results = m :: results
-        case Done() => promise.setValue(querySuccessResponse(results))
+        case Done() => {
+          //System.err.println("Indexed "+q)
+          dict.put(q, results)
+        }
       }
     }
 
+  }
+
+  def handleSearch(q: String) = {
+
+    val promise = Promise[HttpResponse]
+    if (dict.contains(q)) {
+      val f = dict.get(q)
+      System.err.println("Dictionary "+q)
+      f match {
+        case Some(x) => promise.setValue(querySuccessResponse(x))
+        case None => promise.setValue(querySuccessResponse(List[Match]()))
+      }
+    }
+    else {
+      val searches = new Broker[Query]()
+      searches.recv foreach { q =>
+        FuturePool.unboundedPool {searcher.search(q.q, q.broker)}
+      }
+
+      val matches = new Broker[SearchResult]()
+      val err = new Broker[Throwable]
+      searches ! new Query(q, matches)
+
+      var results = List[Match]()
+
+      matches.recv foreach { m =>
+        m match {
+          case m : Match => results = m :: results
+          case Done() => {
+            dict.put(q, results)
+            promise.setValue(querySuccessResponse(results))
+          }
+        }
+      }
+    }
     promise
   }
 }

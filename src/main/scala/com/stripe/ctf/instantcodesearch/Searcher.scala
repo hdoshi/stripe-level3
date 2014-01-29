@@ -4,12 +4,17 @@ import java.io._
 import java.nio.file._
 
 import com.twitter.concurrent.Broker
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
+import scala.io.Source
+
 
 abstract class SearchResult
 case class Match(path: String, line: Int) extends SearchResult
 case class Done() extends SearchResult
 
 class Searcher(indexPath : String)  {
+
   val index : Index = readIndex(indexPath)
   val root = FileSystems.getDefault().getPath(index.path)
 
