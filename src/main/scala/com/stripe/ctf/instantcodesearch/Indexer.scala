@@ -53,8 +53,10 @@ class Indexer(indexPath: String, id: Int) {
           val strContents:String = slurp(r)
 
           //System.err.println("Doing "+ file + " " + id)
+          var i:Int = 0
           for(needle <- Source.fromFile("/usr/share/dict/words").getLines()) {
-            if (needle.length > 3 && needle.length % 3 == id - 1 && strContents.contains(needle)) {
+
+            if (needle.length > 4 && i % 2 == 0 && ((needle.length % 3) == (id - 1)) && strContents.contains(needle)) {
               var line = 0
               //System.out.printf(needle + id)
               strContents.split("\n").zipWithIndex.
@@ -70,6 +72,7 @@ class Indexer(indexPath: String, id: Int) {
                 }
 
             }
+            i = i + 1
           }
           //System.err.println("Done with " + file)
           idx.addFile(root.relativize(file).toString, strContents)
