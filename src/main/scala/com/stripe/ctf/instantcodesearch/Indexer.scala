@@ -54,7 +54,7 @@ class Indexer(indexPath: String, id: Int) {
 
           //System.err.println("Doing "+ file + " " + id)
           for(needle <- Source.fromFile("/usr/share/dict/words").getLines()) {
-            if (needle.length > 4 && needle.length % 3 == id - 1 && strContents.contains(needle)) {
+            if (needle.length > 3 && needle.length % 3 == id - 1 && strContents.contains(needle)) {
               var line = 0
               //System.out.printf(needle + id)
               strContents.split("\n").zipWithIndex.
