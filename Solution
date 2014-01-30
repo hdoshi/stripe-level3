@@ -1,0 +1,2 @@
+- Inverted index for all dictionary words
+- Make sure to get ready to take queries fast enough by asynchronously processing the content
