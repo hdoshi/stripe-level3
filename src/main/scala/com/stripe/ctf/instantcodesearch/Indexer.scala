@@ -5,10 +5,28 @@ import java.util.Arrays
 import java.nio.file._
 import java.nio.charset._
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConverters._
+import scala.io.Source
 
-class Indexer(indexPath: String) {
+
+class Indexer(indexPath: String, id: Int) {
   val root = FileSystems.getDefault().getPath(indexPath)
   val idx = new Index(root.toAbsolutePath.toString)
+
+  val dict = new ConcurrentHashMap[String, List[Match]].asScala
+  def dictionary_words() = {
+    for(line <- Source.fromFile("/usr/share/dict/words").getLines()) {
+      //dict.put(line, List[Match]())
+      //System.err.println(dict.toString)
+      if (line.length % 3 == id - 1) {
+        //handleSearch_dict(line)
+        dict.put(line, List[Match]())
+      }
+      //System.err.println("Dictionary search "+line)
+    }
+  }
+
 
   def index() : Indexer = {
     Files.walkFileTree(root, new SimpleFileVisitor[Path] {
@@ -32,7 +50,28 @@ class Indexer(indexPath: String) {
         decoder onUnmappableCharacter CodingErrorAction.REPORT
         try {
           val r = new InputStreamReader(new ByteArrayInputStream(bytes), decoder)
-          val strContents = slurp(r)
+          val strContents:String = slurp(r)
+
+          //System.err.println("Doing "+ file + " " + id)
+          for(needle <- Source.fromFile("/usr/share/dict/words").getLines()) {
+            if (needle.length % 3 == id - 1 && strContents.contains(needle)) {
+              var line = 0
+              //System.out.printf(needle + id)
+              strContents.split("\n").zipWithIndex.
+                filter { case (l,n) => l.contains(needle) }.
+                map { case (l,n) => {
+
+                    if (!SearchServer.dict.contains(needle)) {
+                        SearchServer.dict(needle) = List[Match]()
+                    }
+                    SearchServer.dict(needle) ::= new Match(root.relativize(file).toString, n+1)
+                    //System.out.println("Result " + n + " " + file + " " + needle)
+                  }
+                }
+
+            }
+          }
+          //System.err.println("Done with " + file)
           idx.addFile(root.relativize(file).toString, strContents)
         } catch {
           case e: IOException => {
@@ -45,6 +84,10 @@ class Indexer(indexPath: String) {
     })
 
     return this
+  }
+
+  def dictionary:scala.collection.concurrent.Map[String, List[Match]] = {
+    return dict
   }
 
   def write(path: String) = {

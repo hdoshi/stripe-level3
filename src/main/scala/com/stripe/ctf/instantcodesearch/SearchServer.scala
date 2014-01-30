@@ -14,7 +14,6 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
   lazy val searcher = new Searcher(IndexPath)
   @volatile var indexed = false
 
-  val dict = new ConcurrentHashMap[String, List[Match]].asScala
   def dictionary_words() = {
     for(line <- Source.fromFile("/usr/share/dict/words").getLines()) {
       //dict.put(line, List[Match]())
@@ -38,16 +37,17 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       Future.value(errorResponse(HttpResponseStatus.OK, "Not indexed"))
     }
   }
+
   override def index(path: String) = {
-    val indexer = new Indexer(path)
+    val indexer = new Indexer(path, id)
 
     FuturePool.unboundedPool {
       System.err.println("[node #" + id + "] Indexing path: " + path)
       indexer.index()
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexer.write(IndexPath)
-      //indexed = true
-      dictionary_words
+      indexed = true
+      //dictionary_words
     }
 
     Future.value(successResponse())
@@ -75,7 +75,7 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
         case m : Match => results = m :: results
         case Done() => {
           //System.err.println("Indexed "+q)
-          dict.put(q, results)
+          SearchServer.dict.put(q, results)
         }
       }
     }
@@ -85,8 +85,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
   def handleSearch(q: String) = {
 
     val promise = Promise[HttpResponse]
-    if (dict.contains(q)) {
-      val f = dict.get(q)
+    if (SearchServer.dict.contains(q)) {
+      val f = SearchServer.dict.get(q)
       System.err.println("Dictionary "+q)
       f match {
         case Some(x) => promise.setValue(querySuccessResponse(x))
@@ -109,7 +109,7 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
         m match {
           case m : Match => results = m :: results
           case Done() => {
-            dict.put(q, results)
+            SearchServer.dict.put(q, results)
             promise.setValue(querySuccessResponse(results))
           }
         }
@@ -117,4 +117,8 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     }
     promise
   }
+}
+
+object SearchServer {
+  val dict = new ConcurrentHashMap[String, List[Match]].asScala
 }
