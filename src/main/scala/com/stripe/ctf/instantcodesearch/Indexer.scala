@@ -57,7 +57,7 @@ class Indexer(indexPath: String, id: Int) {
             val strContents:String = slurp(r)
             val f:Future[Int] = Future.value(dict_index(strContents, file, id))
             myFutures:+ f
-            System.err.println("Done with " + file)
+            //System.err.println("Done with " + file)
             idx.addFile(root.relativize(file).toString, strContents)
           //}
         } catch {

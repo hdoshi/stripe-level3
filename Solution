@@ -1,2 +1,6 @@
 - Inverted index for all dictionary words
 - Make sure to get ready to take queries fast enough by asynchronously processing the content
+- Improvements
+  - Non-blocking hashmap ?
+  - Use a suffix tree
+  - Introduce more parallelism when dealing with requests ( need to profile where the time is going in lookup vs request processing)
