@@ -1,4 +1,4 @@
-package com.stripe.ctf.instantcodesearch
+p ackage com.stripe.ctf.instantcodesearch
 
 import com.twitter.util.{Future, Promise, FuturePool}
 import com.twitter.concurrent.Broker

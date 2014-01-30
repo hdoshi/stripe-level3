@@ -25,11 +25,11 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
       if (success) {
         successResponse()
       } else {
-        errorResponse(HttpResponseStatus.BAD_GATEWAY, "Nodes are not indexed")
+        errorResponse(HttpResponseStatus.OK, "Nodes are not indexed")
       }
     }.rescue {
       case ex: Exception => Future.value(
-        errorResponse(HttpResponseStatus.BAD_GATEWAY, "Nodes are not indexed")
+        errorResponse(HttpResponseStatus.OK, "Nodes are not indexed")
       )
     }
   }
