@@ -1,12 +1,11 @@
 package com.stripe.ctf.instantcodesearch
-
 import com.twitter.util.{Future, Promise, FuturePool}
 import com.twitter.concurrent.Broker
 import org.jboss.netty.handler.codec.http.{HttpResponse, HttpResponseStatus}
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters._
 import scala.io.Source
-
+import scala.collection.concurrent.TrieMap
 
 class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) {
   val IndexPath = "instantcodesearch-" + id + ".index"
@@ -45,6 +44,7 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       System.err.println("[node #" + id + "] Indexing path: " + path)
       indexer.index()
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
+      indexer.waitForAll
       indexer.write(IndexPath)
       indexed = true
       //dictionary_words
@@ -121,4 +121,5 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
 
 object SearchServer {
   val dict = new ConcurrentHashMap[String, List[Match]].asScala
+  //val dict = new scala.collection.concurrent.TrieMap[String, List[Match]]
 }

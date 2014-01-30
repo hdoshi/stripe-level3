@@ -27,7 +27,7 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
       if (success) {
         successResponse()
       } else {
-        if ((new Date()).getTime() - start > 220 * 1000)
+        if ((new Date()).getTime() - start > 200 * 1000)
           successResponse()
         else
           errorResponse(HttpResponseStatus.OK, "Nodes are not indexed")

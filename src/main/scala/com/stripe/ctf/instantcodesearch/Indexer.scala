@@ -8,11 +8,13 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConverters._
 import scala.io.Source
+import com.twitter.util.{Future, Promise, FuturePool}
 
 
 class Indexer(indexPath: String, id: Int) {
   val root = FileSystems.getDefault().getPath(indexPath)
   val idx = new Index(root.toAbsolutePath.toString)
+  val myFutures: Seq[Future[Int]] = Seq[Future[Int]]()
 
   val dict = new ConcurrentHashMap[String, List[Match]].asScala
   def dictionary_words() = {
@@ -49,33 +51,15 @@ class Indexer(indexPath: String, id: Int) {
         decoder onMalformedInput CodingErrorAction.REPORT
         decoder onUnmappableCharacter CodingErrorAction.REPORT
         try {
-          val r = new InputStreamReader(new ByteArrayInputStream(bytes), decoder)
-          val strContents:String = slurp(r)
 
-          //System.err.println("Doing "+ file + " " + id)
-          var i:Int = 0
-          for(needle <- Source.fromFile("/usr/share/dict/words").getLines()) {
-
-            if (needle.length > 4 && i % 4 == 0 && ((needle.length % 3) == (id - 1)) && strContents.contains(needle)) {
-              var line = 0
-              //System.out.printf(needle + id)
-              strContents.split("\n").zipWithIndex.
-                filter { case (l,n) => l.contains(needle) }.
-                map { case (l,n) => {
-
-                    if (!SearchServer.dict.contains(needle)) {
-                        SearchServer.dict(needle) = List[Match]()
-                    }
-                    SearchServer.dict(needle) ::= new Match(root.relativize(file).toString, n+1)
-                    //System.out.println("Result " + n + " " + file + " " + needle)
-                  }
-                }
-
-            }
-            i = i + 1
-          }
-          //System.err.println("Done with " + file)
-          idx.addFile(root.relativize(file).toString, strContents)
+          //FuturePool.unboundedPool {
+            val r = new InputStreamReader(new ByteArrayInputStream(bytes), decoder)
+            val strContents:String = slurp(r)
+            val f:Future[Int] = Future.value(dict_index(strContents, file, id))
+            myFutures:+ f
+            System.err.println("Done with " + file)
+            idx.addFile(root.relativize(file).toString, strContents)
+          //}
         } catch {
           case e: IOException => {
             return FileVisitResult.CONTINUE
@@ -88,6 +72,40 @@ class Indexer(indexPath: String, id: Int) {
 
     return this
   }
+
+  def waitForAll = {
+    Future.collect(myFutures)
+  }
+
+  def dict_index(strContents:String, file:Path, id:Int):Int = {
+    //System.err.println("Doing "+ file + " " + id)
+    var i:Int = 0
+    for(needle <- Source.fromFile("/usr/share/dict/words").getLines()) {
+
+      if (needle.length > 4 && (i % 1 == 0) && ((needle.length % 3) == (id - 1)) && strContents.contains(needle)) {
+        var line = 0
+        //System.out.printf(needle + id)
+        if (strContents.contains(needle)) {
+          strContents.split("\n").zipWithIndex.
+            filter { case (l,n) => l.contains(needle) }.
+            map { case (l,n) => {
+
+              if (!SearchServer.dict.contains(needle)) {
+                  SearchServer.dict(needle) = List[Match]()
+              }
+              SearchServer.dict(needle) ::= new Match(root.relativize(file).toString, n+1)
+              //System.out.println("Result " + n + " " + file + " " + needle)
+            }
+          }
+        }
+
+      }
+      i = i + 1
+    }
+    return 0
+  }
+
+
 
   def dictionary:scala.collection.concurrent.Map[String, List[Match]] = {
     return dict
