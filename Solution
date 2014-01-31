@@ -1,6 +1,9 @@
-- Inverted index for all dictionary words
+- Inverted index for all dictionary words (Too slow for large dataset)
+- Load all file data in memory
 - Make sure to get ready to take queries fast enough by asynchronously processing the content
+- Optionally just handle all queries at the master server to cut down latency. Will not work under concurrent load
 - Improvements
   - Non-blocking hashmap ?
   - Use a suffix tree
   - Introduce more parallelism when dealing with requests ( need to profile where the time is going in lookup vs request processing)
+

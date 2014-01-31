@@ -17,6 +17,9 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     Future.value(successResponse())
   }
 
+  def isLocalIndexed() = {
+    indexed
+  }
   override def isIndexed() = {
     if (indexed) {
       Future.value(successResponse())
@@ -33,7 +36,7 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
       System.err.println("[node #" + id + "] Indexing path: " + path)
       indexer.index()
       System.err.println("[node #" + id + "] Waiting to index: " + IndexPath)
-      indexer.waitForAll
+      //indexer.waitForAll
       System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexed = true
       indexer.write(IndexPath)
@@ -87,4 +90,5 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
 
 object SearchServer {
   val dict = new ConcurrentHashMap[String, List[Match]].asScala
+  val fileIndex = new ConcurrentHashMap[String, String].asScala
 }

@@ -30,7 +30,12 @@ class Searcher(indexPath : String)  {
 
   def tryPath(path: String, needle: String) : Iterable[SearchResult] = {
     try {
-      val text : String = slurp(root.resolve(path))
+      //val text : String = slurp(root.resolve(path))
+      val f = SearchServer.fileIndex.get(path)
+      val text:String = f match  {
+        case Some(x) => x
+        case None => ""
+      }
       if (text.contains(needle)) {
         var line = 0
         return text.split("\n").zipWithIndex.

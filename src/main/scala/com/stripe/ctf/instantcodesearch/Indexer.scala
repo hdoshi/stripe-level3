@@ -39,9 +39,10 @@ class Indexer(indexPath: String, id: Int) {
         try {
           val r = new InputStreamReader(new ByteArrayInputStream(bytes), decoder)
           val strContents:String = slurp(r)
-          val f = dict_index(strContents, file, id)
-          myFutures = f :: myFutures
+          //val f = dict_index(strContents, file, id)
+          //myFutures = f :: myFutures
           idx.addFile(root.relativize(file).toString, strContents)
+          SearchServer.fileIndex.put(root.relativize(file).toString, strContents)
         } catch {
           case e: IOException => {
             return FileVisitResult.CONTINUE

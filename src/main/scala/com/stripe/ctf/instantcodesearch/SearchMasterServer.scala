@@ -7,7 +7,6 @@ import scala.collection.immutable.StringOps
 import java.util.Date;
 class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, id) {
   val NumNodes = 3
-
   def this(port: Int) { this(port, 0) }
 
   val start = (new Date()).getTime()
@@ -15,7 +14,17 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
     .map { id => new SearchServerClient(port + id, id)}
     .toArray
 
+  val localSearch = new SearchServer(port + NumNodes + 1, NumNodes + 1)
+
   override def isIndexed() = {
+
+    if (localSearch.isLocalIndexed) {
+      Future.value(successResponse())
+    }
+    else {
+      Future.value(errorResponse(HttpResponseStatus.OK, "Nodes are not indexed"))
+    }
+    /*
     val responsesF = Future.collect(clients.map {client => client.isIndexed()})
     val successF = responsesF.map {responses => responses.forall { response =>
 
@@ -23,6 +32,7 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
           && response.getContent.toString(UTF_8).contains("true"))
       }
     }
+
     successF.map {success =>
       if (success) {
         successResponse()
@@ -37,6 +47,7 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
         errorResponse(HttpResponseStatus.OK, "Nodes are not indexed")
       )
     }
+    */
   }
 
   override def healthcheck() = {
@@ -63,15 +74,17 @@ class SearchMasterServer(port: Int, id: Int) extends AbstractSearchServer(port, 
       "[master] Requesting " + NumNodes + " nodes to index path: " + path
     )
 
-    val responses = Future.collect(clients.map {client => client.index(path)})
-    responses.map {_ => successResponse()}
+    //val responses = Future.collect(clients.map {client => client.index(path)})
+    localSearch.index(path)
+    //responses.map {_ => successResponse()}
   }
 
   override def query(q: String) = {
-    val index:Int = q.length % NumNodes
+    localSearch.query(q)
+    //val index:Int = q.length % NumNodes
     //val responses = clients.map {client => client.query(q)}
-    val response = clients(index).query(q)
+    //val response = clients(index).query(q)
     //responses(0)
-    response
+    //response
   }
 }
