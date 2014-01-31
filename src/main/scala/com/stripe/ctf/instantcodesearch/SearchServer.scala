@@ -13,17 +13,6 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
   lazy val searcher = new Searcher(IndexPath)
   @volatile var indexed = false
 
-  def dictionary_words() = {
-    for(line <- Source.fromFile("/usr/share/dict/words").getLines()) {
-      //dict.put(line, List[Match]())
-      //System.err.println(dict.toString)
-      if (line.length % 3 == id - 1)
-        handleSearch_dict(line)
-      //System.err.println("Dictionary search "+line)
-    }
-    indexed = true
-  }
-
   override def healthcheck() = {
     Future.value(successResponse())
   }
@@ -43,11 +32,11 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     FuturePool.unboundedPool {
       System.err.println("[node #" + id + "] Indexing path: " + path)
       indexer.index()
-      System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
+      System.err.println("[node #" + id + "] Waiting to index: " + IndexPath)
       indexer.waitForAll
-      indexer.write(IndexPath)
+      System.err.println("[node #" + id + "] Writing index to: " + IndexPath)
       indexed = true
-      //dictionary_words
+      indexer.write(IndexPath)
     }
 
     Future.value(successResponse())
@@ -58,29 +47,6 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
     handleSearch(q)
   }
 
-  def handleSearch_dict(q: String) = {
-    val searches = new Broker[Query]()
-    searches.recv foreach { q =>
-      FuturePool.unboundedPool {searcher.search(q.q, q.broker)}
-    }
-
-    val matches = new Broker[SearchResult]()
-    val err = new Broker[Throwable]
-    searches ! new Query(q, matches)
-
-    var results = List[Match]()
-
-    matches.recv foreach { m =>
-      m match {
-        case m : Match => results = m :: results
-        case Done() => {
-          //System.err.println("Indexed "+q)
-          SearchServer.dict.put(q, results)
-        }
-      }
-    }
-
-  }
 
   def handleSearch(q: String) = {
 
@@ -121,5 +87,4 @@ class SearchServer(port : Int, id : Int) extends AbstractSearchServer(port, id) 
 
 object SearchServer {
   val dict = new ConcurrentHashMap[String, List[Match]].asScala
-  //val dict = new scala.collection.concurrent.TrieMap[String, List[Match]]
 }
